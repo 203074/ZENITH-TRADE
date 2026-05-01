@@ -47,29 +47,46 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-<!-- Firebase SDK -->
+<!-- Firebase SDK (UPDATED) -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+  import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendPasswordResetEmail,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  /* =====================================================
-     ⚠️  أضف بيانات Firebase هنا بعد ما ترسلها
-     ===================================================== */
+  import {
+    getFirestore,
+    doc,
+    setDoc,
+    getDoc,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  /* Firebase Config */
   const firebaseConfig = {
-    apiKey:            "AIzaSyCGjNhNWzEvPaw3oOU2agjz2LIiSEQ5IUE",
-    authDomain:        "zenith-trade-ffc76.firebaseapp.com",
-    projectId:         "zenith-trade-ffc76",
-    storageBucket:     "zenith-trade-ffc76.firebasestorage.app",
+    apiKey: "AIzaSyCGjNhNWzEvPaw3oOU2agjz2LIiSEQ5IUE",
+    authDomain: "zenith-trade-ffc76.firebaseapp.com",
+    projectId: "zenith-trade-ffc76",
+    storageBucket: "zenith-trade-ffc76.firebasestorage.app",
     messagingSenderId: "1090081534711",
-    appId:             "1:1090081534711:web:c4d74e79a595f7da0fd9f2"
+    appId: "1:1090081534711:web:1b689989acc8c4000fd9f2",
+    measurementId: "G-NT0J2GVXJL"
   };
 
-  const app  = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
+  /* Init */
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
 
-  /* --- مراقبة حالة المصادقة --- */
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  /* ===== AUTH STATE ===== */
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       const snap = await getDoc(doc(db, "users", user.uid));
@@ -84,85 +101,107 @@
     }
   });
 
-  /* --- تسجيل مستخدم جديد --- */
-  window.registerUser = async function() {
-    const name    = document.getElementById("reg-name").value.trim();
-    const phone   = document.getElementById("reg-phone").value.trim();
-    const email   = document.getElementById("reg-email").value.trim();
-    const pass    = document.getElementById("reg-password").value;
+  /* ===== REGISTER ===== */
+  window.registerUser = async function () {
+    const name = document.getElementById("reg-name").value.trim();
+    const phone = document.getElementById("reg-phone").value.trim();
+    const email = document.getElementById("reg-email").value.trim();
+    const pass = document.getElementById("reg-password").value;
     const confirm = document.getElementById("reg-confirm").value;
-    const terms   = document.getElementById("terms").checked;
+    const terms = document.getElementById("terms").checked;
 
-    if (!name || name.length < 3)   return showAlert("reg-error","الرجاء إدخال الاسم الكامل (3 أحرف على الأقل)","error");
-    if (!phone || phone.length < 9) return showAlert("reg-error","الرجاء إدخال رقم هاتف صحيح","error");
-    if (!email || !email.includes("@")) return showAlert("reg-error","الرجاء إدخال بريد إلكتروني صحيح","error");
-    if (!pass  || pass.length < 8)  return showAlert("reg-error","كلمة المرور يجب أن تكون 8 أحرف على الأقل","error");
-    if (pass !== confirm)            return showAlert("reg-error","كلمتا المرور غير متطابقتين","error");
-    if (!terms)                      return showAlert("reg-error","يجب الموافقة على شروط الاستخدام","error");
+    if (!name || name.length < 3)
+      return showAlert("reg-error", "الرجاء إدخال الاسم الكامل", "error");
+
+    if (!phone || phone.length < 9)
+      return showAlert("reg-error", "رقم الهاتف غير صحيح", "error");
+
+    if (!email || !email.includes("@"))
+      return showAlert("reg-error", "بريد إلكتروني غير صحيح", "error");
+
+    if (pass.length < 8)
+      return showAlert("reg-error", "كلمة المرور ضعيفة", "error");
+
+    if (pass !== confirm)
+      return showAlert("reg-error", "كلمتا المرور غير متطابقتين", "error");
+
+    if (!terms)
+      return showAlert("reg-error", "يجب الموافقة على الشروط", "error");
 
     setLoading("reg-btn", true, "إنشاء الحساب");
+
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
+
       await setDoc(doc(db, "users", cred.user.uid), {
-        uid:       cred.user.uid,
-        fullName:  name,
-        phone:     phone,
-        email:     email,
-        role:      "client",
-        balance:   { USDT: 0 },
+        uid: cred.user.uid,
+        fullName: name,
+        phone: phone,
+        email: email,
+        role: "client",
+        balance: { USDT: 0 },
         createdAt: serverTimestamp(),
-        status:    "active"
+        status: "active"
       });
-      showAlert("reg-success","✅ تم إنشاء الحساب بنجاح! جاري التحويل...","success");
-    } catch(err) {
+
+      showAlert("reg-success", "تم إنشاء الحساب بنجاح", "success");
+    } catch (err) {
       const msgs = {
-        "auth/email-already-in-use": "هذا البريد الإلكتروني مسجّل مسبقاً",
-        "auth/weak-password":        "كلمة المرور ضعيفة جداً",
-        "auth/invalid-email":        "البريد الإلكتروني غير صحيح",
+        "auth/email-already-in-use": "البريد مستخدم مسبقاً",
+        "auth/weak-password": "كلمة المرور ضعيفة",
+        "auth/invalid-email": "بريد غير صحيح"
       };
-      showAlert("reg-error", msgs[err.code] || "حدث خطأ: " + err.message, "error");
+
+      showAlert("reg-error", msgs[err.code] || err.message, "error");
     } finally {
       setLoading("reg-btn", false, "إنشاء الحساب");
     }
   };
 
-  /* --- تسجيل الدخول --- */
-  window.loginUser = async function() {
+  /* ===== LOGIN ===== */
+  window.loginUser = async function () {
     const email = document.getElementById("login-email").value.trim();
-    const pass  = document.getElementById("login-password").value;
+    const pass = document.getElementById("login-password").value;
 
-    if (!email) return showAlert("login-error","الرجاء إدخال البريد الإلكتروني","error");
-    if (!pass)  return showAlert("login-error","الرجاء إدخال كلمة المرور","error");
+    if (!email)
+      return showAlert("login-error", "أدخل البريد الإلكتروني", "error");
+
+    if (!pass)
+      return showAlert("login-error", "أدخل كلمة المرور", "error");
 
     setLoading("login-btn", true, "تسجيل الدخول");
+
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-    } catch(err) {
+    } catch (err) {
       const msgs = {
-        "auth/user-not-found":  "لا يوجد حساب بهذا البريد",
-        "auth/wrong-password":  "كلمة المرور خاطئة",
-        "auth/invalid-email":   "البريد الإلكتروني غير صحيح",
-        "auth/too-many-requests": "تم تجاوز عدد المحاولات، حاول لاحقاً",
+        "auth/user-not-found": "الحساب غير موجود",
+        "auth/wrong-password": "كلمة المرور خاطئة",
+        "auth/invalid-email": "بريد غير صحيح",
+        "auth/too-many-requests": "محاولات كثيرة، حاول لاحقاً"
       };
-      showAlert("login-error", msgs[err.code] || "حدث خطأ: " + err.message, "error");
+
+      showAlert("login-error", msgs[err.code] || err.message, "error");
     } finally {
       setLoading("login-btn", false, "تسجيل الدخول");
     }
   };
 
-  /* --- إعادة تعيين كلمة المرور --- */
-  window.forgotPassword = async function() {
+  /* ===== RESET PASSWORD ===== */
+  window.forgotPassword = async function () {
     const email = document.getElementById("login-email").value.trim();
-    if (!email) return showAlert("login-error","أدخل بريدك الإلكتروني أولاً","error");
+
+    if (!email)
+      return showAlert("login-error", "أدخل بريدك الإلكتروني", "error");
+
     try {
       await sendPasswordResetEmail(auth, email);
-      showAlert("login-success","✅ تم إرسال رابط إعادة التعيين على بريدك","success");
-    } catch(err) {
-      showAlert("login-error","لم يُعثر على هذا البريد","error");
+      showAlert("login-success", "تم إرسال رابط إعادة التعيين", "success");
+    } catch {
+      showAlert("login-error", "فشل إرسال الرابط", "error");
     }
   };
 </script>
-
 <style>
 /* ============================================================
    ZENITH TRADE - Design System
