@@ -3,54 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- ==================== SEO & OG TAGS ==================== -->
 <title>ZENITH TRADE | منصة تداول العملات الرقمية الاحترافية</title>
-<meta name="description" content="منصة ZENITH TRADE - تداول العملات الرقمية باحترافية وأمان. إيداع وسحب USDT فوري، رسوم بيانية متقدمة، وأمان Firebase متكامل.">
-<meta name="keywords" content="تداول عملات رقمية, بيتكوين, USDT, منصة تداول, كريبتو عربي">
-<meta name="author" content="ZENITH TRADE">
-<meta name="robots" content="index, follow">
-<link rel="canonical" href="https://zenithtrade.io">
-
-<!-- Open Graph / Facebook -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://zenithtrade.io">
-<meta property="og:title" content="ZENITH TRADE | منصة تداول العملات الرقمية">
-<meta property="og:description" content="تداول العملات الرقمية باحترافية وأمان. إيداع وسحب USDT فوري. انضم لأكثر من 250,000 متداول.">
-<meta property="og:image" content="https://zenithtrade.io/og-image.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="ZENITH TRADE - منصة التداول الاحترافية">
-<meta property="og:locale" content="ar_SA">
-<meta property="og:site_name" content="ZENITH TRADE">
-
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:site" content="@zenithtrade">
-<meta name="twitter:creator" content="@zenithtrade">
-<meta name="twitter:title" content="ZENITH TRADE | منصة تداول العملات الرقمية">
-<meta name="twitter:description" content="تداول العملات الرقمية باحترافية وأمان. إيداع وسحب USDT فوري.">
-<meta name="twitter:image" content="https://zenithtrade.io/og-image.png">
-<meta name="twitter:image:alt" content="ZENITH TRADE Platform">
-
-<!-- WhatsApp / Telegram -->
-<meta property="og:image:secure_url" content="https://zenithtrade.io/og-image.png">
-
-<!-- Favicon SVG inline -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23080E14'/><polygon points='16,4 26,9 26,23 16,28 6,23 6,9' fill='none' stroke='%2322c55e' stroke-width='1.5'/><polygon points='10,22 16,8 22,22' fill='%2322c55e'/><polygon points='13,18 16,8 19,18' fill='%234ade80'/></svg>">
+<meta name="description" content="منصة ZENITH TRADE - تداول العملات الرقمية باحترافية وأمان.">
 <meta name="theme-color" content="#080E14">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-
-<!-- Fonts -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23080E14'/><polygon points='16,4 26,9 26,23 16,28 6,23 6,9' fill='none' stroke='%2322c55e' stroke-width='1.5'/><polygon points='10,22 16,8 22,22' fill='%2322c55e'/><polygon points='13,18 16,8 19,18' fill='%234ade80'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-<!-- Firebase SDK (UPDATED) -->
+<!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
   import {
     getAuth,
     createUserWithEmailAndPassword,
@@ -59,16 +22,18 @@
     onAuthStateChanged,
     signOut
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
   import {
     getFirestore,
     doc,
     setDoc,
     getDoc,
-    serverTimestamp
+    getDocs,
+    collection,
+    serverTimestamp,
+    query,
+    orderBy
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  /* Firebase Config */
   const firebaseConfig = {
     apiKey: "AIzaSyCGjNhNWzEvPaw3oOU2agjz2LIiSEQ5IUE",
     authDomain: "zenith-trade-ffc76.firebaseapp.com",
@@ -79,60 +44,60 @@
     measurementId: "G-NT0J2GVXJL"
   };
 
-  /* Init */
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  /* ===== AUTH STATE ===== */
+  /* ===== AUTH STATE LISTENER ===== */
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      const snap = await getDoc(doc(db, "users", user.uid));
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.role === "admin") {
-          window.location.href = "admin-dashboard.html";
+      try {
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (snap.exists()) {
+          const data = snap.data();
+          window._currentUser = { ...data, uid: user.uid };
+          if (data.role === "admin") {
+            showPage("admin");
+            loadAdminData();
+          } else {
+            showPage("dashboard");
+            loadDashboard(data);
+          }
         } else {
-          window.location.href = "dashboard.html";
+          // User exists in Auth but not Firestore — redirect to home
+          showPage("home");
         }
+      } catch (e) {
+        showPage("home");
+      }
+    } else {
+      window._currentUser = null;
+      const cur = document.querySelector(".page.active");
+      if (cur && (cur.id === "page-dashboard" || cur.id === "page-admin")) {
+        showPage("home");
       }
     }
   });
 
   /* ===== REGISTER ===== */
   window.registerUser = async function () {
-    const name = document.getElementById("reg-name").value.trim();
-    const phone = document.getElementById("reg-phone").value.trim();
-    const email = document.getElementById("reg-email").value.trim();
-    const pass = document.getElementById("reg-password").value;
+    const name    = document.getElementById("reg-name").value.trim();
+    const phone   = document.getElementById("reg-phone").value.trim();
+    const email   = document.getElementById("reg-email").value.trim();
+    const pass    = document.getElementById("reg-password").value;
     const confirm = document.getElementById("reg-confirm").value;
-    const terms = document.getElementById("terms").checked;
+    const terms   = document.getElementById("terms").checked;
 
-    if (!name || name.length < 3)
-      return showAlert("reg-error", "الرجاء إدخال الاسم الكامل", "error");
-
-    if (!phone || phone.length < 9)
-      return showAlert("reg-error", "رقم الهاتف غير صحيح", "error");
-
-    if (!email || !email.includes("@"))
-      return showAlert("reg-error", "بريد إلكتروني غير صحيح", "error");
-
-    if (pass.length < 8)
-      return showAlert("reg-error", "كلمة المرور ضعيفة", "error");
-
-    if (pass !== confirm)
-      return showAlert("reg-error", "كلمتا المرور غير متطابقتين", "error");
-
-    if (!terms)
-      return showAlert("reg-error", "يجب الموافقة على الشروط", "error");
+    if (!name || name.length < 3)   return showAlert("reg-error",  "الرجاء إدخال الاسم الكامل (3 أحرف على الأقل)", "error");
+    if (!phone || phone.length < 9) return showAlert("reg-error",  "رقم الهاتف غير صحيح", "error");
+    if (!email || !email.includes("@")) return showAlert("reg-error", "بريد إلكتروني غير صحيح", "error");
+    if (pass.length < 8)            return showAlert("reg-error",  "كلمة المرور قصيرة — 8 أحرف على الأقل", "error");
+    if (pass !== confirm)           return showAlert("reg-error",  "كلمتا المرور غير متطابقتين", "error");
+    if (!terms)                     return showAlert("reg-error",  "يجب الموافقة على الشروط والأحكام", "error");
 
     setLoading("reg-btn", true, "إنشاء الحساب");
-
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
-
       await setDoc(doc(db, "users", cred.user.uid), {
         uid: cred.user.uid,
         fullName: name,
@@ -143,15 +108,13 @@
         createdAt: serverTimestamp(),
         status: "active"
       });
-
-      showAlert("reg-success", "تم إنشاء الحساب بنجاح", "success");
+      showAlert("reg-success", "✅ تم إنشاء حساب بنجاح! جاري تحويلك...", "success");
     } catch (err) {
       const msgs = {
-        "auth/email-already-in-use": "البريد مستخدم مسبقاً",
-        "auth/weak-password": "كلمة المرور ضعيفة",
-        "auth/invalid-email": "بريد غير صحيح"
+        "auth/email-already-in-use": "هذا البريد مستخدم مسبقاً",
+        "auth/weak-password": "كلمة المرور ضعيفة جداً",
+        "auth/invalid-email": "صيغة البريد الإلكتروني خاطئة"
       };
-
       showAlert("reg-error", msgs[err.code] || err.message, "error");
     } finally {
       setLoading("reg-btn", false, "إنشاء الحساب");
@@ -161,403 +124,365 @@
   /* ===== LOGIN ===== */
   window.loginUser = async function () {
     const email = document.getElementById("login-email").value.trim();
-    const pass = document.getElementById("login-password").value;
-
-    if (!email)
-      return showAlert("login-error", "أدخل البريد الإلكتروني", "error");
-
-    if (!pass)
-      return showAlert("login-error", "أدخل كلمة المرور", "error");
+    const pass  = document.getElementById("login-password").value;
+    if (!email) return showAlert("login-error", "أدخل البريد الإلكتروني", "error");
+    if (!pass)  return showAlert("login-error", "أدخل كلمة المرور", "error");
 
     setLoading("login-btn", true, "تسجيل الدخول");
-
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (err) {
       const msgs = {
-        "auth/user-not-found": "الحساب غير موجود",
-        "auth/wrong-password": "كلمة المرور خاطئة",
-        "auth/invalid-email": "بريد غير صحيح",
-        "auth/too-many-requests": "محاولات كثيرة، حاول لاحقاً"
+        "auth/user-not-found":   "لا يوجد حساب بهذا البريد",
+        "auth/wrong-password":   "كلمة المرور غير صحيحة",
+        "auth/invalid-email":    "صيغة البريد الإلكتروني خاطئة",
+        "auth/invalid-credential": "البريد أو كلمة المرور غير صحيحة",
+        "auth/too-many-requests": "محاولات كثيرة، حاول مجدداً بعد قليل"
       };
-
       showAlert("login-error", msgs[err.code] || err.message, "error");
     } finally {
       setLoading("login-btn", false, "تسجيل الدخول");
     }
   };
 
-  /* ===== RESET PASSWORD ===== */
+  /* ===== FORGOT PASSWORD ===== */
   window.forgotPassword = async function () {
     const email = document.getElementById("login-email").value.trim();
-
-    if (!email)
-      return showAlert("login-error", "أدخل بريدك الإلكتروني", "error");
-
+    if (!email) return showAlert("login-error", "أدخل بريدك الإلكتروني أولاً", "error");
     try {
       await sendPasswordResetEmail(auth, email);
-      showAlert("login-success", "تم إرسال رابط إعادة التعيين", "success");
+      showAlert("login-success", "✅ تم إرسال رابط إعادة تعيين كلمة المرور", "success");
     } catch {
-      showAlert("login-error", "فشل إرسال الرابط", "error");
+      showAlert("login-error", "فشل إرسال الرابط، تحقق من البريد الإلكتروني", "error");
+    }
+  };
+
+  /* ===== LOGOUT ===== */
+  window.logoutUser = async function () {
+    await signOut(auth);
+    showPage("home");
+  };
+
+  /* ===== LOAD DASHBOARD ===== */
+  function loadDashboard(data) {
+    const el = (id) => document.getElementById(id);
+    if (el("dash-name"))    el("dash-name").textContent    = data.fullName || "المستخدم";
+    if (el("dash-email"))   el("dash-email").textContent   = data.email || "";
+    if (el("dash-balance")) el("dash-balance").textContent = (data.balance?.USDT || 0).toFixed(2) + " USDT";
+    if (el("dash-status"))  el("dash-status").textContent  = data.status === "active" ? "نشط ✅" : "موقوف";
+  }
+
+  /* ===== LOAD ADMIN DATA ===== */
+  window.loadAdminData = async function () {
+    try {
+      const snap = await getDocs(collection(db, "users"));
+      const users = [];
+      snap.forEach(d => users.push(d.data()));
+      const tbody = document.getElementById("admin-users-table");
+      if (!tbody) return;
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>${u.fullName || "—"}</td>
+          <td style="direction:ltr">${u.email || "—"}</td>
+          <td>${u.phone || "—"}</td>
+          <td>${(u.balance?.USDT || 0).toFixed(2)} USDT</td>
+          <td><span class="badge-${u.status === 'active' ? 'green' : 'red'}">${u.status === 'active' ? 'نشط' : 'موقوف'}</span></td>
+          <td>${u.role === 'admin' ? '👑 مدير' : '👤 عميل'}</td>
+        </tr>
+      `).join('');
+      const el = id => document.getElementById(id);
+      if (el("admin-total")) el("admin-total").textContent = users.length;
+      if (el("admin-active")) el("admin-active").textContent = users.filter(u => u.status === "active").length;
+      if (el("admin-clients")) el("admin-clients").textContent = users.filter(u => u.role === "client").length;
+    } catch (e) {
+      console.error("Admin load error:", e);
     }
   };
 </script>
+
 <style>
-/* ============================================================
-   ZENITH TRADE - Design System
-   Colors: Green #22c55e (primary), Black #080E14 (bg)
-   ============================================================ */
 :root {
-  --green:      #22c55e;
-  --green-lt:   #4ade80;
-  --green-dk:   #16a34a;
-  --green-dim:  #166534;
-  --bg:         #080E14;
-  --bg-card:    #0C1519;
-  --bg-card2:   #101E16;
-  --border:     rgba(34,197,94,0.14);
-  --border-2:   rgba(34,197,94,0.28);
-  --text:       #E2F0E8;
-  --muted:      #5E8A6A;
-  --muted2:     #3A5E45;
-  --red:        #f87171;
-  --amber:      #fbbf24;
+  --green:     #22c55e;
+  --green-lt:  #4ade80;
+  --green-dk:  #16a34a;
+  --green-dim: #166534;
+  --bg:        #080E14;
+  --bg-card:   #0C1519;
+  --bg-card2:  #101E16;
+  --border:    rgba(34,197,94,0.14);
+  --border-2:  rgba(34,197,94,0.28);
+  --text:      #E2F0E8;
+  --muted:     #5E8A6A;
+  --muted2:    #3A5E45;
+  --red:       #f87171;
+  --amber:     #fbbf24;
 }
-
 * { margin:0; padding:0; box-sizing:border-box; }
-
-html { scroll-behavior: smooth; }
-
+html { scroll-behavior:smooth; }
 body {
-  font-family: 'Cairo', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
+  font-family:'Cairo',sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh; overflow-x:hidden;
+}
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    linear-gradient(rgba(34,197,94,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,197,94,0.025) 1px, transparent 1px);
+  background-size:56px 56px;
 }
 
 /* ===== PAGES ===== */
 .page { display:none; min-height:100vh; }
 .page.active { display:block; }
 
-/* ===== GRID BG ===== */
-body::before {
-  content: '';
-  position: fixed; inset:0; pointer-events:none; z-index:0;
-  background-image:
-    linear-gradient(rgba(34,197,94,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34,197,94,0.025) 1px, transparent 1px);
-  background-size: 56px 56px;
-}
-
 /* ===== NAV ===== */
 nav {
-  position: fixed; top:0; left:0; right:0; z-index:100;
-  display: flex; align-items:center; justify-content:space-between;
-  padding: 16px 48px;
-  background: rgba(8,14,20,0.92);
-  backdrop-filter: blur(24px);
-  border-bottom: 1px solid var(--border);
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 48px;
+  background:rgba(8,14,20,0.92);
+  backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);
 }
-
-.logo-wrap {
-  display: flex; align-items:center; gap:12px; cursor:pointer;
-  text-decoration: none;
-}
-
-/* Inline SVG logo mark */
-.logo-svg { width:38px; height:38px; }
-
+.logo-wrap { display:flex; align-items:center; gap:12px; cursor:pointer; text-decoration:none; }
+.logo-svg  { width:38px; height:38px; }
 .logo-text {
-  font-family: 'Space Mono', monospace;
+  font-family:'Space Mono',monospace;
   font-size:18px; font-weight:700;
-  color: var(--green); letter-spacing:3px;
-  line-height:1;
+  color:var(--green); letter-spacing:3px; line-height:1;
 }
 .logo-sub {
-  font-family: 'Space Mono', monospace;
+  font-family:'Space Mono',monospace;
   font-size:9px; font-weight:400;
-  color: var(--muted); letter-spacing:4px;
+  color:var(--muted); letter-spacing:4px;
   display:block; margin-top:2px;
 }
-
 .nav-links { display:flex; gap:28px; align-items:center; }
-.nav-links a {
-  color: var(--muted); text-decoration:none;
-  font-size:14px; font-weight:600;
-  transition: color .2s; cursor:pointer;
-}
-.nav-links a:hover { color: var(--green); }
+.nav-links a { color:var(--muted); text-decoration:none; font-size:14px; font-weight:600; transition:color .2s; cursor:pointer; }
+.nav-links a:hover { color:var(--green); }
 
+/* ===== BUTTONS ===== */
 .btn-green {
-  background: var(--green);
-  color: #080E14; border:none; border-radius:9px;
-  padding: 10px 22px; font-size:14px; font-weight:700;
-  cursor:pointer; font-family:'Cairo',sans-serif;
-  transition: all .2s; letter-spacing:.5px;
+  background:var(--green); color:#080E14; border:none; border-radius:9px;
+  padding:10px 22px; font-size:14px; font-weight:700;
+  cursor:pointer; font-family:'Cairo',sans-serif; transition:all .2s; letter-spacing:.5px;
 }
-.btn-green:hover { background: var(--green-lt); transform:translateY(-1px); }
-
+.btn-green:hover { background:var(--green-lt); transform:translateY(-1px); }
 .btn-outline-green {
-  background: transparent;
-  color: var(--green); border: 1px solid var(--border-2);
-  border-radius:9px; padding:10px 22px;
-  font-size:14px; font-weight:700;
-  cursor:pointer; font-family:'Cairo',sans-serif; transition: all .2s;
+  background:transparent; color:var(--green); border:1px solid var(--border-2);
+  border-radius:9px; padding:10px 22px; font-size:14px; font-weight:700;
+  cursor:pointer; font-family:'Cairo',sans-serif; transition:all .2s;
 }
 .btn-outline-green:hover { border-color:var(--green); background:rgba(34,197,94,0.07); }
+.btn-full {
+  width:100%; background:var(--green); color:#080E14; border:none; border-radius:9px;
+  padding:13px; font-size:15px; font-weight:700;
+  cursor:pointer; font-family:'Cairo',sans-serif; transition:all .2s; margin-top:6px;
+}
+.btn-full:hover { background:var(--green-lt); transform:translateY(-1px); }
+.btn-full:disabled { opacity:.55; cursor:not-allowed; transform:none; }
+.btn-red {
+  background:#f87171; color:#080E14; border:none; border-radius:9px;
+  padding:9px 18px; font-size:13px; font-weight:700;
+  cursor:pointer; font-family:'Cairo',sans-serif; transition:all .2s;
+}
+.btn-red:hover { background:#fca5a5; }
 
 /* ===== HERO ===== */
-.hero {
-  position:relative; z-index:1;
-  padding: 150px 48px 60px;
-  text-align:center;
-}
-
+.hero { position:relative; z-index:1; padding:150px 48px 60px; text-align:center; }
 .hero-badge {
   display:inline-flex; align-items:center; gap:8px;
-  background: rgba(34,197,94,0.07); border: 1px solid rgba(34,197,94,0.22);
+  background:rgba(34,197,94,0.07); border:1px solid rgba(34,197,94,0.22);
   border-radius:100px; padding:8px 22px;
-  font-size:13px; color: var(--green-lt); margin-bottom:32px;
+  font-size:13px; color:var(--green-lt); margin-bottom:32px;
 }
-.badge-dot {
-  width:7px; height:7px;
-  background: var(--green); border-radius:50%;
-  animation: pulse 2s infinite;
-}
+.badge-dot { width:7px; height:7px; background:var(--green); border-radius:50%; animation:pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
-
-.hero h1 {
-  font-size: clamp(34px,6vw,70px);
-  font-weight:900; line-height:1.1; margin-bottom:22px;
-}
-.hero h1 .g { color: var(--green); }
-.hero h1 .gl { color: var(--green-lt); }
-
-.hero p {
-  font-size:17px; color: var(--muted);
-  max-width:540px; margin: 0 auto 36px; line-height:1.9;
-}
-
+.hero h1 { font-size:clamp(34px,6vw,70px); font-weight:900; line-height:1.1; margin-bottom:22px; }
+.hero h1 .g  { color:var(--green); }
+.hero h1 .gl { color:var(--green-lt); }
+.hero p { font-size:17px; color:var(--muted); max-width:540px; margin:0 auto 36px; line-height:1.9; }
 .hero-btns { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
 
 /* ===== STATS BAR ===== */
 .stats-bar {
   position:relative; z-index:1;
   display:flex; justify-content:center; flex-wrap:wrap;
-  max-width:860px; margin: 0 auto 72px;
-  border: 1px solid var(--border);
-  border-radius:14px; overflow:hidden;
-  background: var(--bg-card);
+  max-width:860px; margin:0 auto 72px;
+  border:1px solid var(--border); border-radius:14px; overflow:hidden;
+  background:var(--bg-card);
 }
-.stat-item {
-  flex:1; min-width:150px; padding:22px 28px;
-  border-left: 1px solid var(--border);
-  text-align:center;
-}
+.stat-item { flex:1; min-width:150px; padding:22px 28px; border-left:1px solid var(--border); text-align:center; }
 .stat-item:last-child { border-left:none; }
-.stat-val { font-family:'Space Mono',monospace; font-size:21px; font-weight:700; color: var(--green); }
-.stat-label { font-size:11px; color: var(--muted); margin-top:4px; letter-spacing:1px; }
+.stat-val   { font-family:'Space Mono',monospace; font-size:21px; font-weight:700; color:var(--green); }
+.stat-label { font-size:11px; color:var(--muted); margin-top:4px; letter-spacing:1px; }
 
 /* ===== TICKER ===== */
 .ticker-wrap {
-  position:relative; z-index:1;
-  background: var(--bg-card);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  position:relative; z-index:1; background:var(--bg-card);
+  border-top:1px solid var(--border); border-bottom:1px solid var(--border);
   padding:13px 0; overflow:hidden; margin-bottom:72px;
 }
-.ticker-inner { display:flex; gap:40px; animation: tickerMove 25s linear infinite; white-space:nowrap; }
+.ticker-inner { display:flex; gap:40px; animation:tickerMove 25s linear infinite; white-space:nowrap; }
 @keyframes tickerMove { from{transform:translateX(0)} to{transform:translateX(-50%)} }
 .tick-item { display:flex; align-items:center; gap:8px; font-family:'Space Mono',monospace; font-size:12px; }
-.tick-name { color: var(--muted); }
-.tick-price { color: var(--text); font-weight:700; }
-.tick-up   { color: var(--green-lt); }
-.tick-down { color: var(--red); }
+.tick-name  { color:var(--muted); }
+.tick-price { color:var(--text); font-weight:700; }
+.tick-up    { color:var(--green-lt); }
+.tick-down  { color:var(--red); }
 
 /* ===== SECTIONS ===== */
-.section {
-  position:relative; z-index:1;
-  padding: 50px 48px; max-width:1160px; margin:0 auto;
-}
-.section-title {
-  text-align:center; font-size:34px; font-weight:900; margin-bottom:12px;
-}
-.section-title .g { color: var(--green); }
-.section-sub { text-align:center; color: var(--muted); font-size:14px; margin-bottom:48px; }
-
+.section { position:relative; z-index:1; padding:50px 48px; max-width:1160px; margin:0 auto; }
+.section-title { text-align:center; font-size:34px; font-weight:900; margin-bottom:12px; }
+.section-title .g { color:var(--green); }
+.section-sub { text-align:center; color:var(--muted); font-size:14px; margin-bottom:48px; }
 .features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:20px; }
-
-.feature-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius:14px; padding:28px;
-  transition: all .3s;
-}
-.feature-card:hover {
-  border-color: var(--border-2);
-  transform: translateY(-4px);
-  background: var(--bg-card2);
-}
-.feature-icon {
-  width:48px; height:48px; border-radius:11px;
-  background: rgba(34,197,94,0.09); border: 1px solid rgba(34,197,94,0.18);
-  display:flex; align-items:center; justify-content:center;
-  font-size:22px; margin-bottom:18px;
-}
+.feature-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:28px; transition:all .3s; }
+.feature-card:hover { border-color:var(--border-2); transform:translateY(-4px); background:var(--bg-card2); }
+.feature-icon { width:48px; height:48px; border-radius:11px; background:rgba(34,197,94,0.09); border:1px solid rgba(34,197,94,0.18); display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:18px; }
 .feature-card h3 { font-size:16px; font-weight:700; margin-bottom:8px; }
-.feature-card p  { font-size:12px; color: var(--muted); line-height:1.8; }
-
-/* ===== COINS ===== */
+.feature-card p  { font-size:12px; color:var(--muted); line-height:1.8; }
 .coins-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
-.coin-card {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius:12px; padding:18px 20px;
-  display:flex; align-items:center; gap:14px;
-  transition: all .25s; cursor:pointer;
-}
-.coin-card:hover { border-color: var(--border-2); background: var(--bg-card2); }
-.coin-icon {
-  width:42px; height:42px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  font-size:13px; font-weight:700; font-family:'Space Mono',monospace;
-  flex-shrink:0;
-}
+.coin-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; display:flex; align-items:center; gap:14px; transition:all .25s; cursor:pointer; }
+.coin-card:hover { border-color:var(--border-2); background:var(--bg-card2); }
+.coin-icon { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; font-family:'Space Mono',monospace; flex-shrink:0; }
 .coin-info h4  { font-size:14px; font-weight:700; }
-.coin-info .sym { font-size:11px; color: var(--muted); }
+.coin-info .sym { font-size:11px; color:var(--muted); }
 .coin-right { margin-right:auto; text-align:left; }
 .coin-price { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; }
 .coin-chg   { font-size:11px; margin-top:2px; }
-.chg-up   { color: var(--green-lt); }
-.chg-down { color: var(--red); }
+.chg-up   { color:var(--green-lt); }
+.chg-down { color:var(--red); }
 
 /* ===== FOOTER ===== */
-footer {
-  position:relative; z-index:1;
-  text-align:center; padding:36px;
-  border-top: 1px solid var(--border);
-  color: var(--muted); font-size:12px;
-}
+footer { position:relative; z-index:1; text-align:center; padding:36px; border-top:1px solid var(--border); color:var(--muted); font-size:12px; }
 
-/* ===== AUTH ===== */
-.auth-page {
-  min-height:100vh; display:flex; align-items:center;
-  justify-content:center; position:relative; z-index:1;
-  padding: 96px 20px 40px;
-}
+/* ===== AUTH CARDS ===== */
+.auth-page { min-height:100vh; display:flex; align-items:center; justify-content:center; position:relative; z-index:1; padding:96px 20px 40px; }
 .auth-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background:var(--bg-card); border:1px solid var(--border);
   border-radius:22px; padding:44px 38px;
-  width:100%; max-width:440px;
-  position:relative; overflow:hidden;
+  width:100%; max-width:440px; position:relative; overflow:hidden;
 }
-.auth-card::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:2px;
-  background: linear-gradient(90deg,var(--green-dk),var(--green),var(--green-lt));
-}
-.auth-card::after {
-  content:''; position:absolute; top:2px; left:0; right:0; height:60px;
-  background: linear-gradient(to bottom, rgba(34,197,94,0.05), transparent);
-  pointer-events:none;
-}
-
-.auth-logo { text-align:center; margin-bottom:28px; }
+.auth-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--green-dk),var(--green),var(--green-lt)); }
+.auth-card::after  { content:''; position:absolute; top:2px; left:0; right:0; height:60px; background:linear-gradient(to bottom,rgba(34,197,94,0.05),transparent); pointer-events:none; }
+.auth-logo  { text-align:center; margin-bottom:28px; }
 .auth-title { font-size:21px; font-weight:700; text-align:center; margin-bottom:6px; }
-.auth-sub   { font-size:13px; color: var(--muted); text-align:center; margin-bottom:28px; }
-
+.auth-sub   { font-size:13px; color:var(--muted); text-align:center; margin-bottom:28px; }
 .form-group { margin-bottom:18px; }
-.form-label { display:block; font-size:12px; font-weight:700; color: var(--muted); margin-bottom:7px; letter-spacing:.5px; }
-
+.form-label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:7px; letter-spacing:.5px; }
 .form-input {
-  width:100%;
-  background: rgba(34,197,94,0.03);
-  border: 1px solid rgba(34,197,94,0.12);
-  border-radius:9px; padding:12px 15px;
-  color: var(--text); font-size:14px; font-family:'Cairo',sans-serif;
-  transition: all .2s; outline:none;
+  width:100%; background:rgba(34,197,94,0.03); border:1px solid rgba(34,197,94,0.12);
+  border-radius:9px; padding:12px 15px; color:var(--text); font-size:14px; font-family:'Cairo',sans-serif;
+  transition:all .2s; outline:none;
 }
-.form-input:focus {
-  border-color: var(--green);
-  background: rgba(34,197,94,0.05);
-  box-shadow: 0 0 0 3px rgba(34,197,94,0.1);
-}
-.form-input::placeholder { color: var(--muted2); }
-.form-input[type="email"],
-.form-input[type="password"],
-.form-input[type="tel"] { direction:ltr; text-align:left; }
-
-.btn-full {
-  width:100%;
-  background: var(--green);
-  color: #080E14; border:none; border-radius:9px;
-  padding:13px; font-size:15px; font-weight:700;
-  cursor:pointer; font-family:'Cairo',sans-serif;
-  transition: all .2s; margin-top:6px;
-}
-.btn-full:hover { background: var(--green-lt); transform:translateY(-1px); }
-.btn-full:disabled { opacity:.55; cursor:not-allowed; transform:none; }
-
-.auth-switch { text-align:center; margin-top:22px; font-size:13px; color: var(--muted); }
-.auth-switch a { color: var(--green); cursor:pointer; font-weight:700; }
-.auth-switch a:hover { color: var(--green-lt); }
-
-.alert {
-  border-radius:9px; padding:11px 14px;
-  font-size:13px; margin-bottom:18px; display:none;
-}
+.form-input:focus { border-color:var(--green); background:rgba(34,197,94,0.05); box-shadow:0 0 0 3px rgba(34,197,94,0.1); }
+.form-input::placeholder { color:var(--muted2); }
+.form-input[type="email"],.form-input[type="password"],.form-input[type="tel"] { direction:ltr; text-align:left; }
+.auth-switch { text-align:center; margin-top:22px; font-size:13px; color:var(--muted); }
+.auth-switch a { color:var(--green); cursor:pointer; font-weight:700; }
+.auth-switch a:hover { color:var(--green-lt); }
+.alert { border-radius:9px; padding:11px 14px; font-size:13px; margin-bottom:18px; display:none; }
 .alert.error   { background:rgba(248,113,113,0.09); border:1px solid rgba(248,113,113,0.25); color:var(--red); }
 .alert.success { background:rgba(34,197,94,0.09);   border:1px solid rgba(34,197,94,0.25);   color:var(--green-lt); }
 .alert.show    { display:block; }
-
 .divider { display:flex; align-items:center; gap:10px; margin:20px 0; }
 .divider hr   { flex:1; border:none; border-top:1px solid rgba(255,255,255,0.07); }
-.divider span { font-size:12px; color: var(--muted); }
-
+.divider span { font-size:12px; color:var(--muted); }
 .phone-wrap { display:flex; gap:7px; }
-.phone-prefix {
-  background: rgba(34,197,94,0.05);
-  border: 1px solid rgba(34,197,94,0.12);
-  border-radius:9px; padding:12px 12px;
-  color: var(--muted); font-size:12px;
-  font-family:'Space Mono',monospace; white-space:nowrap;
-}
-
+.phone-prefix { background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.12); border-radius:9px; padding:12px; color:var(--muted); font-size:12px; font-family:'Space Mono',monospace; white-space:nowrap; }
 .terms-check { display:flex; align-items:flex-start; gap:8px; margin-top:-2px; }
-.terms-check input[type=checkbox] { margin-top:3px; accent-color: var(--green); flex-shrink:0; cursor:pointer; }
-.terms-check label { font-size:12px; color: var(--muted); line-height:1.6; cursor:pointer; }
-.terms-check label a { color: var(--green); cursor:pointer; }
-
+.terms-check input[type=checkbox] { margin-top:3px; accent-color:var(--green); flex-shrink:0; cursor:pointer; }
+.terms-check label { font-size:12px; color:var(--muted); line-height:1.6; cursor:pointer; }
+.terms-check label a { color:var(--green); cursor:pointer; }
 .pwd-strength { margin-top:7px; }
 .pwd-bar      { height:3px; border-radius:2px; background:rgba(255,255,255,0.07); margin-bottom:4px; overflow:hidden; }
 .pwd-bar-fill { height:100%; border-radius:2px; transition:all .3s; width:0; }
-.pwd-text     { font-size:11px; color: var(--muted); }
-
-.spinner {
-  display:inline-block; width:16px; height:16px;
-  border:2px solid rgba(8,14,20,.3); border-top-color:#080E14;
-  border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:6px;
-}
+.pwd-text     { font-size:11px; color:var(--muted); }
+.spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(8,14,20,.3); border-top-color:#080E14; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:6px; }
 @keyframes spin { to{transform:rotate(360deg)} }
+.forgot-link { font-size:12px; color:var(--green); cursor:pointer; background:none; border:none; font-family:'Cairo',sans-serif; }
+.forgot-link:hover { color:var(--green-lt); }
 
-.forgot-link { font-size:12px; color: var(--green); cursor:pointer; background:none; border:none; font-family:'Cairo',sans-serif; }
-.forgot-link:hover { color: var(--green-lt); }
+/* ===== DASHBOARD ===== */
+.dash-layout { display:flex; min-height:100vh; }
+.dash-sidebar {
+  width:240px; flex-shrink:0;
+  background:var(--bg-card);
+  border-left:1px solid var(--border);
+  padding:80px 0 24px;
+  position:fixed; top:0; right:0; bottom:0; z-index:50;
+  display:flex; flex-direction:column;
+}
+.dash-sidebar .logo-area { padding:0 24px 32px; border-bottom:1px solid var(--border); margin-bottom:16px; }
+.sidebar-nav { flex:1; padding:0 12px; }
+.sidebar-link {
+  display:flex; align-items:center; gap:10px;
+  padding:11px 14px; border-radius:10px;
+  color:var(--muted); font-size:14px; font-weight:600;
+  cursor:pointer; transition:all .2s; margin-bottom:4px;
+  border:none; background:none; width:100%; font-family:'Cairo',sans-serif;
+  text-align:right;
+}
+.sidebar-link:hover, .sidebar-link.active { background:rgba(34,197,94,0.08); color:var(--green); }
+.sidebar-link .icon { font-size:17px; flex-shrink:0; }
+.sidebar-footer { padding:16px 24px; border-top:1px solid var(--border); }
+.dash-main { margin-right:240px; padding:84px 32px 40px; flex:1; position:relative; z-index:1; }
+.dash-greeting { font-size:22px; font-weight:900; margin-bottom:4px; }
+.dash-greeting .g { color:var(--green); }
+.dash-sub { font-size:13px; color:var(--muted); margin-bottom:32px; }
+.cards-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:28px; }
+.dash-card {
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:14px; padding:22px 20px;
+}
+.dash-card-label { font-size:11px; color:var(--muted); letter-spacing:.8px; margin-bottom:8px; }
+.dash-card-val   { font-family:'Space Mono',monospace; font-size:20px; font-weight:700; color:var(--green); }
+.dash-card-val.red { color:var(--red); }
+.dash-card-sub   { font-size:11px; color:var(--muted2); margin-top:6px; }
+.section-box { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:20px; }
+.section-box-title { font-size:15px; font-weight:700; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.empty-state { text-align:center; color:var(--muted); padding:32px 0; font-size:13px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+table th { text-align:right; padding:10px 12px; color:var(--muted); font-weight:600; font-size:11px; letter-spacing:.5px; border-bottom:1px solid var(--border); }
+table td { padding:12px; border-bottom:1px solid rgba(34,197,94,0.06); }
+table tr:last-child td { border-bottom:none; }
+table tr:hover td { background:rgba(34,197,94,0.03); }
+.badge-green { background:rgba(34,197,94,0.12); color:var(--green-lt); padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+.badge-red   { background:rgba(248,113,113,0.12); color:var(--red);      padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+.badge-amber { background:rgba(251,191,36,0.12);  color:var(--amber);    padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+.user-avatar {
+  width:36px; height:36px; border-radius:50%;
+  background:linear-gradient(135deg,var(--green-dim),var(--green));
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; color:#080E14; flex-shrink:0;
+}
+.user-info-row { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.user-info-row .name { font-weight:700; font-size:14px; }
+.user-info-row .email { font-size:11px; color:var(--muted); }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width:768px) {
   nav { padding:14px 20px; }
   .hero { padding:120px 20px 50px; }
   .section { padding:40px 20px; }
-  .stats-bar { max-width:100%; margin: 0 20px 56px; }
+  .stats-bar { max-width:100%; margin:0 20px 56px; }
+  .dash-sidebar { width:100%; position:static; height:auto; padding:70px 0 0; flex-direction:row; overflow-x:auto; }
+  .dash-sidebar .logo-area { display:none; }
+  .sidebar-nav { display:flex; padding:8px; gap:4px; }
+  .sidebar-footer { padding:8px; border-top:none; border-right:1px solid var(--border); }
+  .sidebar-link { flex-direction:column; gap:4px; font-size:10px; padding:8px 10px; min-width:60px; }
+  .dash-main { margin-right:0; padding:8px 14px 40px; }
+  .dash-layout { flex-direction:column; }
 }
 </style>
 </head>
 <body>
 
-<!-- ======= NAV ======= -->
-<nav>
+<!-- ======= NAV (shown on home/auth pages only) ======= -->
+<nav id="main-nav">
   <div class="logo-wrap" onclick="showPage('home')">
-    <!-- Logo SVG Mark -->
     <svg class="logo-svg" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
       <rect width="38" height="38" rx="9" fill="#080E14"/>
       <polygon points="19,3 31,9.5 31,28.5 19,35 7,28.5 7,9.5" fill="none" stroke="#166534" stroke-width="1.2"/>
@@ -573,7 +498,6 @@ footer {
       <span class="logo-sub">TRADE</span>
     </div>
   </div>
-
   <div class="nav-links">
     <a onclick="showPage('home')">الرئيسية</a>
     <a href="#markets">الأسواق</a>
@@ -587,113 +511,51 @@ footer {
      HOME PAGE
      ===================================================================== -->
 <div class="page active" id="page-home">
-
-  <!-- HERO -->
   <div class="hero">
-    <div class="hero-badge">
-      <span class="badge-dot"></span>
-      منصة آمنة موثوقة — مدعومة بـ Firebase
-    </div>
-    <h1>
-      تداول <span class="g">العملات الرقمية</span><br>
-      بثقة <span class="gl">واحترافية</span> حقيقية
-    </h1>
-    <p>
-      منصة ZENITH TRADE تجمع بين سرعة التنفيذ الفوري وأمان Firebase،
-      مع إيداع وسحب USDT مباشر وإشراف إداري على كل عملية
-    </p>
+    <div class="hero-badge"><span class="badge-dot"></span> منصة آمنة موثوقة — مدعومة بـ Firebase</div>
+    <h1>تداول <span class="g">العملات الرقمية</span><br>بثقة <span class="gl">واحترافية</span> حقيقية</h1>
+    <p>منصة ZENITH TRADE تجمع بين سرعة التنفيذ الفوري وأمان Firebase، مع إيداع وسحب USDT مباشر وإشراف إداري على كل عملية</p>
     <div class="hero-btns">
-      <button class="btn-green" onclick="showPage('register')" style="padding:13px 34px;font-size:15px">
-        إنشاء حساب مجاني
-      </button>
-      <button class="btn-outline-green" onclick="showPage('login')" style="padding:13px 34px;font-size:15px">
-        تسجيل الدخول
-      </button>
+      <button class="btn-green"         onclick="showPage('register')" style="padding:13px 34px;font-size:15px">إنشاء حساب مجاني</button>
+      <button class="btn-outline-green" onclick="showPage('login')"    style="padding:13px 34px;font-size:15px">تسجيل الدخول</button>
     </div>
   </div>
 
-  <!-- STATS -->
   <div class="stats-bar">
-    <div class="stat-item">
-      <div class="stat-val">$4.2B+</div>
-      <div class="stat-label">حجم التداول اليومي</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-val">250K+</div>
-      <div class="stat-label">مستخدم نشط</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-val">40+</div>
-      <div class="stat-label">عملة رقمية</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-val">99.9%</div>
-      <div class="stat-label">وقت التشغيل</div>
-    </div>
+    <div class="stat-item"><div class="stat-val">$4.2B+</div><div class="stat-label">حجم التداول اليومي</div></div>
+    <div class="stat-item"><div class="stat-val">250K+</div><div class="stat-label">مستخدم نشط</div></div>
+    <div class="stat-item"><div class="stat-val">40+</div><div class="stat-label">عملة رقمية</div></div>
+    <div class="stat-item"><div class="stat-val">99.9%</div><div class="stat-label">وقت التشغيل</div></div>
   </div>
 
-  <!-- TICKER -->
   <div class="ticker-wrap" id="markets">
     <div class="ticker-inner" id="ticker"></div>
   </div>
 
-  <!-- FEATURES -->
   <div class="section" id="features">
     <div class="section-title">لماذا <span class="g">ZENITH</span>؟</div>
     <div class="section-sub">ميزات مصممة للمتداول العربي المحترف</div>
     <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">🔒</div>
-        <h3>أمان Firebase</h3>
-        <p>مصادقة متعددة الطبقات وتشفير Firestore بأعلى معايير الأمان العالمية</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">⚡</div>
-        <h3>تنفيذ فوري</h3>
-        <p>تنفيذ أوامر التداول بأقل من 50ms مع بيانات السوق اللحظية</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">💚</div>
-        <h3>إيداع وسحب USDT</h3>
-        <p>نظام ودائع وسحوبات USDT مع مراجعة إدارية فورية وشفافة</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <h3>تحليلات احترافية</h3>
-        <p>رسوم بيانية متقدمة وكشف حساب مفصل مع إحصائيات كاملة</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🌍</div>
-        <h3>دعم عربي كامل</h3>
-        <p>واجهة عربية 100% مع دعم العملاء على مدار الساعة</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🛡️</div>
-        <h3>لوحة المدير</h3>
-        <p>إدارة العملاء والرصيد والعمليات من لوحة تحكم إدارية خاصة ومحمية</p>
-      </div>
+      <div class="feature-card"><div class="feature-icon">🔒</div><h3>أمان Firebase</h3><p>مصادقة متعددة الطبقات وتشفير Firestore بأعلى معايير الأمان العالمية</p></div>
+      <div class="feature-card"><div class="feature-icon">⚡</div><h3>تنفيذ فوري</h3><p>تنفيذ أوامر التداول بأقل من 50ms مع بيانات السوق اللحظية</p></div>
+      <div class="feature-card"><div class="feature-icon">💚</div><h3>إيداع وسحب USDT</h3><p>نظام ودائع وسحوبات USDT مع مراجعة إدارية فورية وشفافة</p></div>
+      <div class="feature-card"><div class="feature-icon">📊</div><h3>تحليلات احترافية</h3><p>رسوم بيانية متقدمة وكشف حساب مفصل مع إحصائيات كاملة</p></div>
+      <div class="feature-card"><div class="feature-icon">🌍</div><h3>دعم عربي كامل</h3><p>واجهة عربية 100% مع دعم العملاء على مدار الساعة</p></div>
+      <div class="feature-card"><div class="feature-icon">🛡️</div><h3>لوحة المدير</h3><p>إدارة العملاء والرصيد والعمليات من لوحة تحكم إدارية خاصة ومحمية</p></div>
     </div>
   </div>
 
-  <!-- COINS -->
   <div class="section" style="padding-bottom:80px">
-    <div class="section-title" style="font-size:26px;margin-bottom:28px">
-      أسعار <span class="g">العملات</span> اللحظية
-    </div>
+    <div class="section-title" style="font-size:26px;margin-bottom:28px">أسعار <span class="g">العملات</span> اللحظية</div>
     <div class="coins-grid" id="coinsGrid"></div>
   </div>
 
   <footer>
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px">
-      <svg width="22" height="22" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
-        <rect width="38" height="38" rx="8" fill="#080E14"/>
-        <polygon points="19,3 31,9.5 31,28.5 19,35 7,28.5 7,9.5" fill="none" stroke="#22c55e" stroke-width="1.2"/>
-        <polygon points="14,28 19,13 24,28" fill="#22c55e"/>
-        <polygon points="16.5,22 19,13 21.5,22" fill="#4ade80"/>
-      </svg>
+      <svg width="22" height="22" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" rx="8" fill="#080E14"/><polygon points="19,3 31,9.5 31,28.5 19,35 7,28.5 7,9.5" fill="none" stroke="#22c55e" stroke-width="1.2"/><polygon points="14,28 19,13 24,28" fill="#22c55e"/><polygon points="16.5,22 19,13 21.5,22" fill="#4ade80"/></svg>
       <span style="font-family:'Space Mono',monospace;font-size:14px;color:var(--green);letter-spacing:3px;font-weight:700">ZENITH TRADE</span>
     </div>
-    <p>© 2025 ZENITH TRADE. جميع الحقوق محفوظة. — منصة تداول العملات الرقمية الاحترافية</p>
+    <p>© 2025 ZENITH TRADE. جميع الحقوق محفوظة.</p>
   </footer>
 </div>
 
@@ -705,32 +567,18 @@ footer {
     <div class="auth-card">
       <div class="auth-logo">
         <div class="logo-wrap" onclick="showPage('home')" style="justify-content:center">
-          <svg class="logo-svg" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
-            <rect width="38" height="38" rx="9" fill="#080E14"/>
-            <polygon points="19,3 31,9.5 31,28.5 19,35 7,28.5 7,9.5" fill="none" stroke="#166534" stroke-width="1.2"/>
-            <polygon points="14,28 19,13 24,28" fill="#22c55e"/>
-            <polygon points="16.5,22 19,13 21.5,22" fill="#4ade80"/>
-            <line x1="19" y1="10" x2="19" y2="5" stroke="#4ade80" stroke-width="1.2" stroke-linecap="round"/>
-            <circle cx="19" cy="4.5" r="1.2" fill="#4ade80"/>
-          </svg>
-          <div>
-            <div class="logo-text" style="font-size:16px">ZENITH</div>
-            <span class="logo-sub">TRADE</span>
-          </div>
+          <svg class="logo-svg" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" rx="9" fill="#080E14"/><polygon points="19,3 31,9.5 31,28.5 19,35 7,28.5 7,9.5" fill="none" stroke="#166534" stroke-width="1.2"/><polygon points="14,28 19,13 24,28" fill="#22c55e"/><polygon points="16.5,22 19,13 21.5,22" fill="#4ade80"/><line x1="19" y1="10" x2="19" y2="5" stroke="#4ade80" stroke-width="1.2" stroke-linecap="round"/><circle cx="19" cy="4.5" r="1.2" fill="#4ade80"/></svg>
+          <div><div class="logo-text" style="font-size:16px">ZENITH</div><span class="logo-sub">TRADE</span></div>
         </div>
       </div>
-
       <div class="auth-title">إنشاء حساب جديد</div>
       <div class="auth-sub">انضم لآلاف المتداولين المحترفين</div>
-
-      <div class="alert error" id="reg-error"></div>
+      <div class="alert error"   id="reg-error"></div>
       <div class="alert success" id="reg-success"></div>
-
       <div class="form-group">
         <label class="form-label">الاسم الكامل</label>
         <input class="form-input" type="text" id="reg-name" placeholder="أدخل اسمك الكامل">
       </div>
-
       <div class="form-group">
         <label class="form-label">رقم الهاتف</label>
         <div class="phone-wrap">
@@ -738,12 +586,10 @@ footer {
           <input class="form-input" type="tel" id="reg-phone" placeholder="5XXXXXXXX" style="flex:1">
         </div>
       </div>
-
       <div class="form-group">
         <label class="form-label">البريد الإلكتروني</label>
         <input class="form-input" type="email" id="reg-email" placeholder="example@email.com">
       </div>
-
       <div class="form-group">
         <label class="form-label">كلمة المرور</label>
         <input class="form-input" type="password" id="reg-password" placeholder="8 أحرف على الأقل" oninput="checkPwd(this.value)">
@@ -752,22 +598,16 @@ footer {
           <div class="pwd-text" id="pwdText">أدخل كلمة مرور قوية</div>
         </div>
       </div>
-
       <div class="form-group">
         <label class="form-label">تأكيد كلمة المرور</label>
         <input class="form-input" type="password" id="reg-confirm" placeholder="أعد كتابة كلمة المرور">
       </div>
-
       <div class="form-group terms-check">
         <input type="checkbox" id="terms">
         <label for="terms">أوافق على <a>شروط الاستخدام</a> و<a>سياسة الخصوصية</a></label>
       </div>
-
       <button class="btn-full" id="reg-btn" onclick="registerUser()">إنشاء الحساب</button>
-
-      <div class="auth-switch">
-        لديك حساب؟ <a onclick="showPage('login')">سجّل الدخول</a>
-      </div>
+      <div class="auth-switch">لديك حساب؟ <a onclick="showPage('login')">سجّل الدخول</a></div>
     </div>
   </div>
 </div>
@@ -780,71 +620,312 @@ footer {
     <div class="auth-card">
       <div class="auth-logo">
         <div class="logo-wrap" onclick="showPage('home')" style="justify-content:center">
-          <svg class="logo-svg" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
-            <rect width="38" height="38" rx="9" fill="#080E14"/>
-            <polygon points="19,3 31,9.5 31,28.5 19,35 7,28.5 7,9.5" fill="none" stroke="#166534" stroke-width="1.2"/>
-            <polygon points="14,28 19,13 24,28" fill="#22c55e"/>
-            <polygon points="16.5,22 19,13 21.5,22" fill="#4ade80"/>
-            <line x1="19" y1="10" x2="19" y2="5" stroke="#4ade80" stroke-width="1.2" stroke-linecap="round"/>
-            <circle cx="19" cy="4.5" r="1.2" fill="#4ade80"/>
-          </svg>
-          <div>
-            <div class="logo-text" style="font-size:16px">ZENITH</div>
-            <span class="logo-sub">TRADE</span>
-          </div>
+          <svg class="logo-svg" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" rx="9" fill="#080E14"/><polygon points="19,3 31,9.5 31,28.5 19,35 7,28.5 7,9.5" fill="none" stroke="#166534" stroke-width="1.2"/><polygon points="14,28 19,13 24,28" fill="#22c55e"/><polygon points="16.5,22 19,13 21.5,22" fill="#4ade80"/><line x1="19" y1="10" x2="19" y2="5" stroke="#4ade80" stroke-width="1.2" stroke-linecap="round"/><circle cx="19" cy="4.5" r="1.2" fill="#4ade80"/></svg>
+          <div><div class="logo-text" style="font-size:16px">ZENITH</div><span class="logo-sub">TRADE</span></div>
         </div>
       </div>
-
       <div class="auth-title">تسجيل الدخول</div>
       <div class="auth-sub">مرحباً بعودتك إلى ZENITH TRADE</div>
-
-      <div class="alert error" id="login-error"></div>
+      <div class="alert error"   id="login-error"></div>
       <div class="alert success" id="login-success"></div>
-
       <div class="form-group">
         <label class="form-label">البريد الإلكتروني</label>
         <input class="form-input" type="email" id="login-email" placeholder="example@email.com">
       </div>
-
       <div class="form-group">
         <label class="form-label">كلمة المرور</label>
-        <input class="form-input" type="password" id="login-password" placeholder="كلمة المرور"
-          onkeydown="if(event.key==='Enter')loginUser()">
+        <input class="form-input" type="password" id="login-password" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')loginUser()">
       </div>
-
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;margin-top:-6px">
         <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;cursor:pointer">
           <input type="checkbox" style="accent-color:var(--green)"> تذكرني
         </label>
         <button class="forgot-link" onclick="forgotPassword()">نسيت كلمة المرور؟</button>
       </div>
-
       <button class="btn-full" id="login-btn" onclick="loginUser()">تسجيل الدخول</button>
-
       <div class="divider"><hr><span>أو</span><hr></div>
-
-      <!-- Admin login -->
-      <button class="btn-outline-green" style="width:100%;padding:12px;font-size:13px;border-radius:9px"
-        onclick="loginUser()">
-        🔑 دخول المدير
+      <button class="btn-outline-green" style="width:100%;padding:12px;font-size:13px;border-radius:9px" onclick="loginUser()">
+        🔑 دخول المدير (نفس بيانات الحساب)
       </button>
-
-      <div class="auth-switch">
-        ليس لديك حساب؟ <a onclick="showPage('register')">أنشئ حساباً مجانياً</a>
-      </div>
+      <div class="auth-switch">ليس لديك حساب؟ <a onclick="showPage('register')">أنشئ حساباً مجانياً</a></div>
     </div>
   </div>
 </div>
 
 <!-- =====================================================================
-     JavaScript
+     CLIENT DASHBOARD PAGE
+     ===================================================================== -->
+<div class="page" id="page-dashboard">
+  <div class="dash-layout">
+    <!-- SIDEBAR -->
+    <aside class="dash-sidebar">
+      <div class="logo-area">
+        <div class="logo-wrap" style="cursor:default">
+          <svg class="logo-svg" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" rx="9" fill="#080E14"/><polygon points="19,3 31,9.5 31,28.5 19,35 7,28.5 7,9.5" fill="none" stroke="#166534" stroke-width="1.2"/><polygon points="14,28 19,13 24,28" fill="#22c55e"/><polygon points="16.5,22 19,13 21.5,22" fill="#4ade80"/></svg>
+          <div><div class="logo-text" style="font-size:15px">ZENITH</div><span class="logo-sub">TRADE</span></div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="sidebar-link active" onclick="switchTab('overview')"><span class="icon">📊</span> نظرة عامة</button>
+        <button class="sidebar-link" onclick="switchTab('deposit')"><span class="icon">💰</span> إيداع</button>
+        <button class="sidebar-link" onclick="switchTab('withdraw')"><span class="icon">💸</span> سحب</button>
+        <button class="sidebar-link" onclick="switchTab('history')"><span class="icon">📋</span> السجل</button>
+        <button class="sidebar-link" onclick="switchTab('profile')"><span class="icon">👤</span> حسابي</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn-red" style="width:100%" onclick="logoutUser()">🚪 تسجيل الخروج</button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="dash-main">
+      <!-- OVERVIEW TAB -->
+      <div id="tab-overview">
+        <div class="dash-greeting">مرحباً، <span class="g" id="dash-name">...</span> 👋</div>
+        <div class="dash-sub" id="dash-email"></div>
+
+        <div class="cards-row">
+          <div class="dash-card">
+            <div class="dash-card-label">💰 رصيدك الحالي</div>
+            <div class="dash-card-val" id="dash-balance">0.00 USDT</div>
+            <div class="dash-card-sub">متاح للسحب</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-label">✅ حالة الحساب</div>
+            <div class="dash-card-val" id="dash-status">نشط ✅</div>
+            <div class="dash-card-sub">حسابك فعّال</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-label">📈 إجمالي الإيداعات</div>
+            <div class="dash-card-val">0.00 USDT</div>
+            <div class="dash-card-sub">منذ إنشاء الحساب</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-label">📉 إجمالي السحوبات</div>
+            <div class="dash-card-val">0.00 USDT</div>
+            <div class="dash-card-sub">منذ إنشاء الحساب</div>
+          </div>
+        </div>
+
+        <div class="section-box">
+          <div class="section-box-title">⚡ الإجراءات السريعة</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button class="btn-green" style="padding:11px 24px" onclick="switchTab('deposit')">💰 إيداع USDT</button>
+            <button class="btn-outline-green" style="padding:11px 24px" onclick="switchTab('withdraw')">💸 طلب سحب</button>
+            <button class="btn-outline-green" style="padding:11px 24px" onclick="switchTab('history')">📋 عرض السجل</button>
+          </div>
+        </div>
+
+        <div class="section-box">
+          <div class="section-box-title">📊 أسعار السوق اللحظية</div>
+          <table>
+            <thead><tr><th>العملة</th><th>السعر</th><th>التغيير 24س</th></tr></thead>
+            <tbody id="dash-market-table"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DEPOSIT TAB -->
+      <div id="tab-deposit" style="display:none">
+        <div class="dash-greeting">إيداع <span class="g">USDT</span></div>
+        <div class="dash-sub" style="margin-bottom:24px">أرسل USDT إلى العنوان أدناه وأرسل لنا إيصال التحويل</div>
+        <div class="section-box" style="max-width:540px">
+          <div class="section-box-title">📥 عنوان المحفظة (TRC-20)</div>
+          <div style="background:rgba(34,197,94,0.05);border:1px solid var(--border-2);border-radius:10px;padding:16px;margin-bottom:16px;font-family:'Space Mono',monospace;font-size:13px;word-break:break-all;color:var(--green-lt);direction:ltr">
+            TRX_WALLET_ADDRESS_HERE
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:18px">⚠️ أرسل فقط USDT (TRC-20). الحد الأدنى للإيداع: 10 USDT</p>
+          <div class="form-group">
+            <label class="form-label">المبلغ المُرسَل (USDT)</label>
+            <input class="form-input" type="number" id="deposit-amount" placeholder="مثال: 100" min="10">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم التحويل / Hash</label>
+            <input class="form-input" type="text" id="deposit-txid" placeholder="أدخل رقم العملية (TXID)" style="direction:ltr">
+          </div>
+          <button class="btn-full" onclick="submitDeposit()">📤 إرسال طلب الإيداع</button>
+          <div class="alert error"   id="deposit-error"   style="margin-top:12px"></div>
+          <div class="alert success" id="deposit-success" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- WITHDRAW TAB -->
+      <div id="tab-withdraw" style="display:none">
+        <div class="dash-greeting">طلب <span class="g">سحب</span></div>
+        <div class="dash-sub" style="margin-bottom:24px">أدخل عنوان محفظتك وسيتم مراجعة الطلب من قبل الإدارة</div>
+        <div class="section-box" style="max-width:540px">
+          <div class="section-box-title">💸 سحب USDT</div>
+          <div class="form-group">
+            <label class="form-label">عنوان محفظتك (TRC-20)</label>
+            <input class="form-input" type="text" id="withdraw-address" placeholder="T..." style="direction:ltr">
+          </div>
+          <div class="form-group">
+            <label class="form-label">المبلغ (USDT)</label>
+            <input class="form-input" type="number" id="withdraw-amount" placeholder="الحد الأدنى: 10 USDT" min="10">
+          </div>
+          <button class="btn-full" onclick="submitWithdraw()">📤 إرسال طلب السحب</button>
+          <div class="alert error"   id="withdraw-error"   style="margin-top:12px"></div>
+          <div class="alert success" id="withdraw-success" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- HISTORY TAB -->
+      <div id="tab-history" style="display:none">
+        <div class="dash-greeting">سجل <span class="g">المعاملات</span></div>
+        <div class="dash-sub" style="margin-bottom:24px">جميع عمليات الإيداع والسحب الخاصة بك</div>
+        <div class="section-box">
+          <div class="section-box-title">📋 المعاملات</div>
+          <div class="empty-state">لا توجد معاملات بعد — ابدأ بالإيداع الآن</div>
+        </div>
+      </div>
+
+      <!-- PROFILE TAB -->
+      <div id="tab-profile" style="display:none">
+        <div class="dash-greeting">ملف <span class="g">حسابي</span></div>
+        <div class="dash-sub" style="margin-bottom:24px">بيانات حسابك الشخصي</div>
+        <div class="section-box" style="max-width:480px">
+          <div class="user-info-row">
+            <div class="user-avatar" id="profile-avatar">؟</div>
+            <div>
+              <div class="name" id="profile-name">—</div>
+              <div class="email" id="profile-email">—</div>
+            </div>
+          </div>
+          <table>
+            <tr><td style="color:var(--muted);font-size:12px">الاسم</td><td id="p-name">—</td></tr>
+            <tr><td style="color:var(--muted);font-size:12px">البريد</td><td id="p-email" style="direction:ltr">—</td></tr>
+            <tr><td style="color:var(--muted);font-size:12px">الهاتف</td><td id="p-phone" style="direction:ltr">—</td></tr>
+            <tr><td style="color:var(--muted);font-size:12px">الرصيد</td><td id="p-balance">—</td></tr>
+            <tr><td style="color:var(--muted);font-size:12px">الحالة</td><td id="p-status">—</td></tr>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- =====================================================================
+     ADMIN DASHBOARD PAGE
+     ===================================================================== -->
+<div class="page" id="page-admin">
+  <div class="dash-layout">
+    <aside class="dash-sidebar">
+      <div class="logo-area">
+        <div class="logo-wrap" style="cursor:default">
+          <svg class="logo-svg" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" rx="9" fill="#080E14"/><polygon points="19,3 31,9.5 31,28.5 19,35 7,28.5 7,9.5" fill="none" stroke="#166534" stroke-width="1.2"/><polygon points="14,28 19,13 24,28" fill="#22c55e"/><polygon points="16.5,22 19,13 21.5,22" fill="#4ade80"/></svg>
+          <div><div class="logo-text" style="font-size:15px">ADMIN</div><span class="logo-sub">ZENITH</span></div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="sidebar-link active" onclick="switchAdminTab('overview')"><span class="icon">📊</span> الإحصائيات</button>
+        <button class="sidebar-link" onclick="switchAdminTab('users')"><span class="icon">👥</span> المستخدمون</button>
+        <button class="sidebar-link" onclick="switchAdminTab('deposits')"><span class="icon">💰</span> الإيداعات</button>
+        <button class="sidebar-link" onclick="switchAdminTab('withdrawals')"><span class="icon">💸</span> السحوبات</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn-red" style="width:100%" onclick="logoutUser()">🚪 خروج</button>
+      </div>
+    </aside>
+
+    <main class="dash-main">
+      <!-- ADMIN OVERVIEW -->
+      <div id="admin-tab-overview">
+        <div class="dash-greeting">لوحة تحكم <span class="g">المدير</span> 👑</div>
+        <div class="dash-sub" style="margin-bottom:24px">إدارة شاملة لمنصة ZENITH TRADE</div>
+        <div class="cards-row">
+          <div class="dash-card">
+            <div class="dash-card-label">👥 إجمالي المستخدمين</div>
+            <div class="dash-card-val" id="admin-total">—</div>
+            <div class="dash-card-sub">مسجل في المنصة</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-label">✅ المستخدمون النشطون</div>
+            <div class="dash-card-val" id="admin-active">—</div>
+            <div class="dash-card-sub">حساب فعّال</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-label">👤 العملاء</div>
+            <div class="dash-card-val" id="admin-clients">—</div>
+            <div class="dash-card-sub">ليسوا مديرين</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-label">⏳ طلبات معلقة</div>
+            <div class="dash-card-val">0</div>
+            <div class="dash-card-sub">تحتاج مراجعة</div>
+          </div>
+        </div>
+        <div class="section-box">
+          <div class="section-box-title">🔄 تحديث البيانات</div>
+          <button class="btn-green" style="padding:10px 22px" onclick="loadAdminData()">🔄 تحديث الآن</button>
+        </div>
+      </div>
+
+      <!-- ADMIN USERS -->
+      <div id="admin-tab-users" style="display:none">
+        <div class="dash-greeting">إدارة <span class="g">المستخدمين</span></div>
+        <div class="dash-sub" style="margin-bottom:24px">جميع المسجلين في المنصة</div>
+        <div class="section-box">
+          <div class="section-box-title">👥 قائمة المستخدمين</div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>الاسم</th>
+                  <th>البريد الإلكتروني</th>
+                  <th>الهاتف</th>
+                  <th>الرصيد</th>
+                  <th>الحالة</th>
+                  <th>الدور</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-table">
+                <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">جاري التحميل...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN DEPOSITS -->
+      <div id="admin-tab-deposits" style="display:none">
+        <div class="dash-greeting">طلبات <span class="g">الإيداع</span></div>
+        <div class="dash-sub" style="margin-bottom:24px">مراجعة وقبول طلبات الإيداع</div>
+        <div class="section-box">
+          <div class="empty-state">لا توجد طلبات إيداع معلقة حالياً ✅</div>
+        </div>
+      </div>
+
+      <!-- ADMIN WITHDRAWALS -->
+      <div id="admin-tab-withdrawals" style="display:none">
+        <div class="dash-greeting">طلبات <span class="g">السحب</span></div>
+        <div class="dash-sub" style="margin-bottom:24px">مراجعة وقبول طلبات السحب</div>
+        <div class="section-box">
+          <div class="empty-state">لا توجد طلبات سحب معلقة حالياً ✅</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- =====================================================================
+     JavaScript (non-Firebase)
      ===================================================================== -->
 <script>
 /* ===== NAVIGATION ===== */
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-' + name);
-  if (el) { el.classList.add('active'); window.scrollTo(0,0); }
+  if (el) { el.classList.add('active'); window.scrollTo(0, 0); }
+  // Show/hide nav bar (hide on dashboard/admin)
+  const nav = document.getElementById('main-nav');
+  if (nav) {
+    nav.style.display = (name === 'dashboard' || name === 'admin') ? 'none' : 'flex';
+  }
+  // If going to dashboard, refresh profile tab data
+  if (name === 'dashboard' && window._currentUser) {
+    refreshProfileTab(window._currentUser);
+    buildMarketTable();
+  }
 }
 
 /* ===== ALERT ===== */
@@ -853,7 +934,7 @@ function showAlert(id, msg, type) {
   if (!el) return;
   el.textContent = msg;
   el.className = 'alert ' + type + ' show';
-  setTimeout(() => el.classList.remove('show'), 5000);
+  setTimeout(() => el.classList.remove('show'), 6000);
 }
 
 /* ===== LOADING ===== */
@@ -861,15 +942,13 @@ function setLoading(btnId, loading, label) {
   const btn = document.getElementById(btnId);
   if (!btn) return;
   btn.disabled = loading;
-  btn.innerHTML = loading
-    ? `<span class="spinner"></span>${label}`
-    : label;
+  btn.innerHTML = loading ? `<span class="spinner"></span>${label}` : label;
 }
 
 /* ===== PASSWORD STRENGTH ===== */
 function checkPwd(v) {
-  const bar  = document.getElementById('pwdBar');
-  const txt  = document.getElementById('pwdText');
+  const bar = document.getElementById('pwdBar');
+  const txt = document.getElementById('pwdText');
   if (!bar) return;
   let score = 0;
   if (v.length >= 8)          score++;
@@ -879,12 +958,86 @@ function checkPwd(v) {
   const colors = ['#f87171','#fbbf24','#22c55e','#4ade80'];
   const labels = ['ضعيفة','متوسطة','جيدة','قوية جداً'];
   bar.style.width      = (score * 25) + '%';
-  bar.style.background = colors[score-1] || '#f87171';
-  txt.textContent = score > 0 ? 'كلمة المرور ' + (labels[score-1] || '') : 'أدخل كلمة مرور قوية';
-  txt.style.color = colors[score-1] || 'var(--muted)';
+  bar.style.background = colors[score - 1] || '#f87171';
+  txt.textContent = score > 0 ? 'كلمة المرور ' + (labels[score - 1] || '') : 'أدخل كلمة مرور قوية';
+  txt.style.color = colors[score - 1] || 'var(--muted)';
 }
 
-/* ===== TICKER DATA ===== */
+/* ===== DASHBOARD TABS ===== */
+function switchTab(name) {
+  ['overview','deposit','withdraw','history','profile'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.style.display = 'none';
+  });
+  const target = document.getElementById('tab-' + name);
+  if (target) target.style.display = 'block';
+  // Update sidebar active
+  document.querySelectorAll('#page-dashboard .sidebar-link').forEach((btn, i) => {
+    btn.classList.remove('active');
+  });
+  const tabs = ['overview','deposit','withdraw','history','profile'];
+  const idx = tabs.indexOf(name);
+  const btns = document.querySelectorAll('#page-dashboard .sidebar-link');
+  if (btns[idx]) btns[idx].classList.add('active');
+  // Populate profile tab
+  if (name === 'profile' && window._currentUser) refreshProfileTab(window._currentUser);
+}
+
+/* ===== ADMIN TABS ===== */
+function switchAdminTab(name) {
+  ['overview','users','deposits','withdrawals'].forEach(t => {
+    const el = document.getElementById('admin-tab-' + t);
+    if (el) el.style.display = 'none';
+  });
+  const target = document.getElementById('admin-tab-' + name);
+  if (target) target.style.display = 'block';
+  document.querySelectorAll('#page-admin .sidebar-link').forEach(btn => btn.classList.remove('active'));
+  const tabs = ['overview','users','deposits','withdrawals'];
+  const idx = tabs.indexOf(name);
+  const btns = document.querySelectorAll('#page-admin .sidebar-link');
+  if (btns[idx]) btns[idx].classList.add('active');
+  if (name === 'users') loadAdminData();
+}
+
+/* ===== PROFILE TAB FILL ===== */
+function refreshProfileTab(data) {
+  const set = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+  const initials = (data.fullName || '؟').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  set('profile-avatar', initials);
+  set('profile-name', data.fullName || '—');
+  set('profile-email', data.email || '—');
+  set('p-name', data.fullName || '—');
+  set('p-email', data.email || '—');
+  set('p-phone', data.phone || '—');
+  set('p-balance', (data.balance?.USDT || 0).toFixed(2) + ' USDT');
+  set('p-status', data.status === 'active' ? 'نشط ✅' : 'موقوف ⛔');
+}
+
+/* ===== DEPOSIT SUBMIT ===== */
+function submitDeposit() {
+  const amount = document.getElementById('deposit-amount').value;
+  const txid   = document.getElementById('deposit-txid').value.trim();
+  if (!amount || parseFloat(amount) < 10) return showAlert('deposit-error', 'الحد الأدنى للإيداع هو 10 USDT', 'error');
+  if (!txid) return showAlert('deposit-error', 'أدخل رقم العملية (TXID)', 'error');
+  showAlert('deposit-success', '✅ تم إرسال طلب الإيداع. سيتم مراجعته خلال 24 ساعة', 'success');
+  document.getElementById('deposit-amount').value = '';
+  document.getElementById('deposit-txid').value = '';
+}
+
+/* ===== WITHDRAW SUBMIT ===== */
+function submitWithdraw() {
+  const address = document.getElementById('withdraw-address').value.trim();
+  const amount  = document.getElementById('withdraw-amount').value;
+  if (!address || address.length < 10) return showAlert('withdraw-error', 'أدخل عنوان محفظة صحيح', 'error');
+  if (!amount || parseFloat(amount) < 10) return showAlert('withdraw-error', 'الحد الأدنى للسحب هو 10 USDT', 'error');
+  const bal = window._currentUser?.balance?.USDT || 0;
+  if (parseFloat(amount) > bal) return showAlert('withdraw-error', 'رصيدك غير كافٍ', 'error');
+  showAlert('withdraw-success', '✅ تم إرسال طلب السحب. سيتم معالجته خلال 24 ساعة', 'success');
+  document.getElementById('withdraw-address').value = '';
+  document.getElementById('withdraw-amount').value = '';
+}
+
+/* ===== TICKER & MARKET DATA ===== */
 const coinData = [
   {s:'BTC',  p:'67,420.50', c:'+2.34', up:true},
   {s:'ETH',  p:'3,812.20',  c:'+1.87', up:true},
@@ -897,8 +1050,9 @@ const coinData = [
   {s:'DOT',  p:'8.450',     c:'+1.45', up:true},
   {s:'MATIC',p:'0.9140',    c:'-2.30', up:false},
 ];
+const coinColors = ['#F7931A','#627EEA','#F3BA2F','#9945FF','#00AAE4','#0033AD','#BA9F33','#E84142','#E6007A','#8247E5'];
 
-/* Ticker */
+// Ticker
 const tickerEl = document.getElementById('ticker');
 if (tickerEl) {
   const arr = [...coinData, ...coinData];
@@ -911,17 +1065,13 @@ if (tickerEl) {
   ).join('');
 }
 
-/* Coins Grid */
-const coinColors = ['#F7931A','#627EEA','#F3BA2F','#9945FF','#00AAE4','#0033AD','#BA9F33','#E84142','#E6007A','#8247E5'];
+// Coins Grid
 const gridEl = document.getElementById('coinsGrid');
 if (gridEl) {
   gridEl.innerHTML = coinData.map((c, i) =>
     `<div class="coin-card">
       <div class="coin-icon" style="background:${coinColors[i]}1A;color:${coinColors[i]}">${c.s.slice(0,2)}</div>
-      <div class="coin-info">
-        <h4>${c.s}</h4>
-        <div class="sym">${c.s}/USDT</div>
-      </div>
+      <div class="coin-info"><h4>${c.s}</h4><div class="sym">${c.s}/USDT</div></div>
       <div class="coin-right">
         <div class="coin-price">$${c.p}</div>
         <div class="coin-chg ${c.up ? 'chg-up' : 'chg-down'}">${c.c}%</div>
@@ -929,6 +1079,20 @@ if (gridEl) {
     </div>`
   ).join('');
 }
+
+// Dashboard market table
+function buildMarketTable() {
+  const tb = document.getElementById('dash-market-table');
+  if (!tb) return;
+  tb.innerHTML = coinData.map(c =>
+    `<tr>
+      <td><strong>${c.s}/USDT</strong></td>
+      <td style="font-family:'Space Mono',monospace">$${c.p}</td>
+      <td class="${c.up ? 'chg-up' : 'chg-down'}">${c.c}%</td>
+    </tr>`
+  ).join('');
+}
+buildMarketTable();
 </script>
 </body>
 </html>
